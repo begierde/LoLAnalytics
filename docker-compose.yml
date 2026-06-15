@@ -1,0 +1,59 @@
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: lolanalytics
+      MYSQL_USER: lolanalytics
+      MYSQL_PASSWORD: lolanalytics
+      MYSQL_ROOT_PASSWORD: rootpassword
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -ulolanalytics -plolanalytics --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  api:
+    build: .
+    command: sh -c "alembic upgrade head && uvicorn loltimecheck.web.app:app --host 0.0.0.0 --port 8000"
+    environment:
+      DATABASE_URL: mysql+pymysql://lolanalytics:lolanalytics@mysql:3306/lolanalytics
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin}
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-change-me-use-env-in-production}
+      CORS_ORIGINS: http://localhost:5173,http://127.0.0.1:5173,http://localhost:8080,http://127.0.0.1:8080
+    depends_on:
+      mysql:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+
+  worker:
+    build: .
+    command: sh -c "alembic upgrade head && python -m loltimecheck.worker"
+    environment:
+      DATABASE_URL: mysql+pymysql://lolanalytics:lolanalytics@mysql:3306/lolanalytics
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin}
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-change-me-use-env-in-production}
+      WORKER_POLL_SECONDS: 5
+    depends_on:
+      mysql:
+        condition: service_healthy
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    depends_on:
+      - api
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+
+volumes:
+  mysql-data:
