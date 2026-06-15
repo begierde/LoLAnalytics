@@ -1,0 +1,3 @@
+# LoLAnalytics
+
+Initializing project repository.
