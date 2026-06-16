@@ -13,6 +13,7 @@ permissions:
 env:
   API_IMAGE: ghcr.io/begierde/lolanalytics-api
   FRONTEND_IMAGE: ghcr.io/begierde/lolanalytics-frontend
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   backend-tests:
